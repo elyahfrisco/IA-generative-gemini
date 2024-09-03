@@ -1,0 +1,190 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>IA PRESENTATION : FRISCO</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+      crossorigin="anonymous"
+    />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+  </head>
+  <body>
+    <div class="container mt-5">
+      <fieldset class="border p-3 mb-4">
+        <legend class="w-auto px-2">IA Générative</legend>
+        <h2 class="mb-4">Évaluation de l'état de santé du patient</h2>
+        <form id="healthForm" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Température (°C) :</label>
+            <input type="text" id="temperature" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Poids (kg) :</label>
+            <input type="text" id="weight" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Taille (cm) :</label>
+            <input type="text" id="height" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fréquence cardiaque (bpm) :</label>
+            <input type="text" id="heartRate" class="form-control" />
+          </div>
+          <fieldset class="col-12">
+            <legend class="col-form-label pt-0">
+              Tension artérielle (mmHg)
+            </legend>
+            <div class="row g-2">
+              <div class="col-md-6">
+                <label class="form-label">Systolique :</label>
+                <input type="text" id="bloodPressureSys" class="form-control" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Diastolique :</label>
+                <input type="text" id="bloodPressureDia" class="form-control" />
+              </div>
+            </div>
+          </fieldset>
+          <div class="col-12">
+            <button type="button" class="btn btn-primary" id="assessButton">
+              Évaluer l'état de santé
+            </button>
+          </div>
+        </form>
+
+        <h3 class="mt-4">Résultat de l'évaluation</h3>
+        <!-- Spinner de chargement -->
+        <div
+          id="loadingSpinner"
+          class="spinner-border text-primary d-none"
+          role="status"
+        >
+          <span class="visually-hidden">Chargement...</span>
+        </div>
+        <div id="assessment" class="alert alert-info mt-3"></div>
+      </fieldset>
+
+      <fieldset class="border p-3">
+        <legend class="w-auto px-2">IA Vision par l'ordinateur</legend>
+        <h3 class="mt-4">Analyse de l'image de diagnostic</h3>
+        <div class="mb-3">
+          <label for="imageUpload" class="form-label">
+            Télécharger une image (scanner ou échographie) :
+          </label>
+          <input
+            type="file"
+            class="form-control"
+            id="imageUpload"
+            accept="image/*"
+          />
+        </div>
+        <button type="button" class="btn btn-secondary" id="analyzeButton">
+          Analyser l'image
+        </button>
+
+        <!-- Spinner de chargement pour l'analyse de l'image -->
+        <div
+          id="loadingSpinnerImage"
+          class="spinner-border text-secondary d-none"
+          role="status"
+        >
+          <span class="visually-hidden">Chargement...</span>
+        </div>
+        <div id="imageAssessment" class="alert alert-info mt-3"></div>
+      </fieldset>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/generative-ai": "https://esm.run/@google/generative-ai"
+        }
+      }
+    </script>
+    <script type="module">
+      import { GoogleGenerativeAI } from "@google/generative-ai";
+      //entrez votre clé :
+      const API_KEY = "";
+      const genAI = new GoogleGenerativeAI(API_KEY);
+
+      // Évaluation de l'état de santé
+      document
+        .getElementById("assessButton")
+        .addEventListener("click", async () => {
+          // Affiche le spinner de chargement
+          document.getElementById("loadingSpinner").classList.remove("d-none");
+
+          const temperature = document.getElementById("temperature").value;
+          const weight = document.getElementById("weight").value;
+          const height = document.getElementById("height").value;
+          const heartRate = document.getElementById("heartRate").value;
+          const bloodPressureSys =
+            document.getElementById("bloodPressureSys").value;
+          const bloodPressureDia =
+            document.getElementById("bloodPressureDia").value;
+
+          const prompt = `Analysez les signes vitaux du patient avec une température de ${temperature}°C, un poids de ${weight} kg, une taille de ${height} cm, une fréquence cardiaque de ${heartRate} bpm, et une tension artérielle de ${bloodPressureSys}/${bloodPressureDia} mmHg. Décrivez l'état général sans fournir de conseils spécifiques.`;
+
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          const text = await response.text();
+
+          // Cache le spinner de chargement
+          document.getElementById("loadingSpinner").classList.add("d-none");
+          document.getElementById("assessment").innerText = text;
+        });
+
+      // Analyse de l'image
+      document
+        .getElementById("analyzeButton")
+        .addEventListener("click", async () => {
+          // Affiche le spinner de chargement
+          document
+            .getElementById("loadingSpinnerImage")
+            .classList.remove("d-none");
+
+          const fileInput = document.getElementById("imageUpload");
+          const file = fileInput.files[0];
+
+          if (!file) {
+            document.getElementById("imageAssessment").innerText =
+              "Veuillez sélectionner une image.";
+            document
+              .getElementById("loadingSpinnerImage")
+              .classList.add("d-none");
+            return;
+          }
+
+          const base64EncodedDataPromise = new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(",")[1]);
+            reader.readAsDataURL(file);
+          });
+
+          const imagePart = {
+            inlineData: {
+              data: await base64EncodedDataPromise,
+              mimeType: file.type,
+            },
+          };
+
+          const prompt =
+            "Décrivez cette image médicale (scanner ou échographie).";
+
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const result = await model.generateContent([prompt, imagePart]);
+          const response = await result.response;
+          const text = await response.text();
+
+          // Cache le spinner de chargement
+          document
+            .getElementById("loadingSpinnerImage")
+            .classList.add("d-none");
+          document.getElementById("imageAssessment").innerText = text;
+        });
+    </script>
+  </body>
+</html>
